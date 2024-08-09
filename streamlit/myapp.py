@@ -1,10 +1,6 @@
 import streamlit as st
 from openai import OpenAI
 import re
-import json
-
-with open('config.json') as config_file:
-    config = json.load(config_file)
 
 api_key = st.secrets["api"]["key"]
 
