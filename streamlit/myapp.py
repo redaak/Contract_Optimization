@@ -6,8 +6,9 @@ import json
 with open('config.json') as config_file:
     config = json.load(config_file)
 
-api_key = config['api_key']
-base_urls=config['base_url']
+api_key = st.secrets["api"]["key"]
+
+base_urls="https://integrate.api.nvidia.com/v1"
 # Initialize the OpenAI client with your API key
 client = OpenAI(
     base_url=base_urls,
