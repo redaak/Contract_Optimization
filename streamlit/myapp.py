@@ -10,10 +10,9 @@ api_key = config['api_key']
 base_urls=config['base_url']
 # Initialize the OpenAI client with your API key
 client = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
+    base_url=base_urls,
     api_key=api_key
 )
-
 
 def analyze_contract(file_content):
     prompt = f"""
