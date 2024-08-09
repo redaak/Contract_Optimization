@@ -1,19 +1,20 @@
 import streamlit as st
 from openai import OpenAI
 import re
+from langdetect import detect
 
+# Initialize OpenAI client
 api_key = st.secrets["api"]["key"]
 
-base_urls="https://integrate.api.nvidia.com/v1"
-# Initialize the OpenAI client with your API key
+base_urls = "https://integrate.api.nvidia.com/v1"
 client = OpenAI(
     base_url=base_urls,
     api_key=api_key
 )
 
-def analyze_contract(file_content):
+def analyze_contract(file_content, language):
     prompt = f"""
-    Analyze the following contract and provide:
+    Analyze the following contract in {language} and provide:
     1. Key terms
     2. Potential risks
     3. Optimization suggestions
@@ -32,15 +33,11 @@ def analyze_contract(file_content):
 
     return response.choices[0].message.content
 
-
 def clean_analysis_result(analysis_result):
-    # Remove introductory or unnecessary text
     unwanted_phrases = ["Here's the analysis of the contract:"]
     for phrase in unwanted_phrases:
         analysis_result = analysis_result.replace(phrase, "")
-
     return analysis_result.strip()
-
 
 def extract_sections(analysis_result):
     sections = {
@@ -49,30 +46,24 @@ def extract_sections(analysis_result):
         "Optimization Suggestions": "No optimization suggestions found."
     }
 
-    # Use regular expressions to find and extract sections
-    key_terms_match = re.search(r"Key Terms\s*:(.*?)(?:Potential Risks|Optimization Suggestions|$)", analysis_result,
-                                re.DOTALL)
+    key_terms_match = re.search(r"Key Terms\s*:(.*?)(?:Potential Risks|Optimization Suggestions|$)", analysis_result, re.DOTALL)
     risks_match = re.search(r"Potential Risks\s*:(.*?)(?:Optimization Suggestions|$)", analysis_result, re.DOTALL)
     suggestions_match = re.search(r"Optimization Suggestions\s*:(.*)", analysis_result, re.DOTALL)
 
     if key_terms_match:
         sections["Key Terms"] = key_terms_match.group(1).strip()
-
     if risks_match:
         sections["Potential Risks"] = risks_match.group(1).strip()
-
     if suggestions_match:
         sections["Optimization Suggestions"] = suggestions_match.group(1).strip()
 
     return sections
 
-
 # Streamlit app layout
 st.set_page_config(page_title="Contract Optimization AI", layout="wide")
 
 st.title("📄 Contract Optimization AI")
-st.markdown(
-    "Upload your contract for AI-driven analysis, and receive key terms, potential risks, and optimization suggestions.")
+st.markdown("Upload your contract for AI-driven analysis, and receive key terms, potential risks, and optimization suggestions.")
 
 # Upload section
 with st.container():
@@ -83,9 +74,18 @@ with st.container():
         contract_text = uploaded_file.read().decode("utf-8")
         st.write("**File Uploaded:**", uploaded_file.name)
 
+        # Detect language
+        language_code = detect(contract_text)
+        language_map = {
+            'en': 'English',
+            'fr': 'French',
+            'ar': 'Arabic'
+        }
+        language = language_map.get(language_code, 'English')  # Default to English if language not mapped
+
         # Analyze the contract
         with st.spinner('Analyzing contract...'):
-            analysis_result = analyze_contract(contract_text)
+            analysis_result = analyze_contract(contract_text, language)
             cleaned_result = clean_analysis_result(analysis_result)
 
         # Display the results in expanders
@@ -98,8 +98,7 @@ with st.container():
             st.write(extract_sections(cleaned_result).get("Potential Risks", "No risks identified."))
 
         with st.expander("Optimization Suggestions"):
-            st.write(
-                extract_sections(cleaned_result).get("Optimization Suggestions", "No optimization suggestions found."))
+            st.write(extract_sections(cleaned_result).get("Optimization Suggestions", "No optimization suggestions found."))
 
         # Full analysis section
         with st.expander("Full Analysis"):
